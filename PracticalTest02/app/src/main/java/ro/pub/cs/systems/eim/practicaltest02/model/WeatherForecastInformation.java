@@ -2,77 +2,57 @@ package ro.pub.cs.systems.eim.practicaltest02.model;
 
 public class WeatherForecastInformation {
 
-    private String temperature;
-    private String windSpeed;
-    private String condition;
-    private String pressure;
-    private String humidity;
+    private String updated;
+    private String eur;
+    private String usd;
 
     public WeatherForecastInformation() {
-        this.temperature = null;
-        this.windSpeed = null;
-        this.condition = null;
-        this.pressure = null;
-        this.humidity = null;
+        this.updated = null;
+        this.eur = null;
+        this.usd = null;
     }
 
-    public WeatherForecastInformation(String temperature, String windSpeed, String condition, String pressure, String humidity) {
-        this.temperature = temperature;
-        this.windSpeed = windSpeed;
-        this.condition = condition;
-        this.pressure = pressure;
-        this.humidity = humidity;
+    public WeatherForecastInformation(String updated, String eur, String usd) {
+        this.updated = updated;
+        this.eur = eur;
+        this.usd = usd;
     }
 
-    public String getTemperature() {
-        return temperature;
+    public String getUpdated() {
+        return updated;
     }
 
-    public void setTemperature(String temperature) {
-        this.temperature = temperature;
+    public void setUpdated(String updated) {
+        this.updated = updated;
     }
 
-    public String getWindSpeed() {
-        return windSpeed;
+    public String getEur() {
+        return eur;
     }
 
-    public void setWindSpeed(String windSpeed) {
-        this.windSpeed = windSpeed;
+    public void setEur(String eur) {
+        this.eur = eur;
     }
 
-    public String getCondition() {
-        return condition;
+    public String getUsd() {
+        return usd;
     }
 
-    public void setCondition(String condition) {
-        this.condition = condition;
+    public void setUsd(String usd) {
+        this.usd = usd;
     }
 
-    public String getPressure() {
-        return pressure;
-    }
-
-    public void setPressure(String pressure) {
-        this.pressure = pressure;
-    }
-
-    public String getHumidity() {
-        return humidity;
-    }
-
-    public void setHumidity(String humidity) {
-        this.humidity = humidity;
-    }
-
-    @Override
-    public String toString() {
-        return "WeatherForecastInformation{" +
-                "temperature='" + temperature + '\'' +
-                ", windSpeed='" + windSpeed + '\'' +
-                ", condition='" + condition + '\'' +
-                ", pressure='" + pressure + '\'' +
-                ", humidity='" + humidity + '\'' +
+    public String eurToString() {
+        return "Curs{" +
+                "updated='" + updated + '\'' +
+                ", eur='" + eur + '\'' +
                 '}';
     }
 
+    public String usdToString() {
+        return "Curs{" +
+                "updated='" + updated + '\'' +
+                ", usd='" + usd + '\'' +
+                '}';
+    }
 }

@@ -13,14 +13,18 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TimeZone;
 
 import cz.msebera.android.httpclient.NameValuePair;
 import cz.msebera.android.httpclient.client.HttpClient;
 import cz.msebera.android.httpclient.client.ResponseHandler;
 import cz.msebera.android.httpclient.client.entity.UrlEncodedFormEntity;
+import cz.msebera.android.httpclient.client.methods.HttpGet;
 import cz.msebera.android.httpclient.client.methods.HttpPost;
 import cz.msebera.android.httpclient.impl.client.BasicResponseHandler;
 import cz.msebera.android.httpclient.impl.client.DefaultHttpClient;
@@ -40,6 +44,12 @@ public class CommunicationThread extends Thread {
         this.socket = socket;
     }
 
+    public String getCurrentTime() {
+        SimpleDateFormat f = new SimpleDateFormat("yyyy-MMM-dd HH:mm:ss");
+        f.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return f.format(new Date());
+    }
+
     @Override
     public void run() {
         if (socket == null) {
@@ -55,80 +65,63 @@ public class CommunicationThread extends Thread {
             }
             Log.i(Constants.TAG, "[COMMUNICATION THREAD] Waiting for parameters from client (city / information type!");
             String city = bufferedReader.readLine();
-            String informationType = bufferedReader.readLine();
-            if (city == null || city.isEmpty() || informationType == null || informationType.isEmpty()) {
+            if (city == null || city.isEmpty()) {
                 Log.e(Constants.TAG, "[COMMUNICATION THREAD] Error receiving parameters from client (city / information type!");
                 return;
             }
-            HashMap<String, WeatherForecastInformation> data = serverThread.getData();
+            WeatherForecastInformation data = serverThread.getData();
             WeatherForecastInformation weatherForecastInformation = null;
-            if (data.containsKey(city)) {
+            int diff = Integer.MAX_VALUE;
+            if (data != null) {
+                String currentDate = getCurrentTime();
+                String currentTime = currentDate.split(" ")[1];
+                int currentMin = Integer.parseInt(currentTime.split(":")[1]);
+                Log.d("anaaremere", currentMin + "");
+
+                String lastDate = data.getUpdated();
+                String lastTime = lastDate.split(" ")[1];
+                int lastMin = Integer.parseInt(lastTime.split(":")[1]);
+                Log.d("anaaremere", lastMin + "");
+
+                diff = currentMin - lastMin;
+            }
+            if (data != null && diff == 0) {
                 Log.i(Constants.TAG, "[COMMUNICATION THREAD] Getting the information from the cache...");
-                weatherForecastInformation = data.get(city);
+                weatherForecastInformation = data;
             } else {
                 Log.i(Constants.TAG, "[COMMUNICATION THREAD] Getting the information from the webservice...");
                 HttpClient httpClient = new DefaultHttpClient();
-                HttpPost httpPost = new HttpPost(Constants.WEB_SERVICE_ADDRESS);
-                List<NameValuePair> params = new ArrayList<>();
-                params.add(new BasicNameValuePair(Constants.QUERY_ATTRIBUTE, city));
-                UrlEncodedFormEntity urlEncodedFormEntity = new UrlEncodedFormEntity(params, HTTP.UTF_8);
-                httpPost.setEntity(urlEncodedFormEntity);
+                HttpGet httpGet = new HttpGet(Constants.WEB_SERVICE_ADDRESS + "EUR" + ".json");
                 ResponseHandler<String> responseHandler = new BasicResponseHandler();
-                String pageSourceCode = httpClient.execute(httpPost, responseHandler);
+                String pageSourceCode = httpClient.execute(httpGet, responseHandler);
                 if (pageSourceCode == null) {
                     Log.e(Constants.TAG, "[COMMUNICATION THREAD] Error getting the information from the webservice!");
                     return;
                 }
                 Document document = Jsoup.parse(pageSourceCode);
-                Element element = document.child(0);
-                Elements elements = element.getElementsByTag(Constants.SCRIPT_TAG);
-                for (Element script: elements) {
-                    String scriptData = script.data();
-                    if (scriptData.contains(Constants.SEARCH_KEY)) {
-                        int position = scriptData.indexOf(Constants.SEARCH_KEY) + Constants.SEARCH_KEY.length();
-                        scriptData = scriptData.substring(position);
-                        JSONObject content = new JSONObject(scriptData);
-                        JSONObject currentObservation = content.getJSONObject(Constants.CURRENT_OBSERVATION);
-                        String temperature = currentObservation.getString(Constants.TEMPERATURE);
-                        String windSpeed = currentObservation.getString(Constants.WIND_SPEED);
-                        String condition = currentObservation.getString(Constants.CONDITION);
-                        String pressure = currentObservation.getString(Constants.PRESSURE);
-                        String humidity = currentObservation.getString(Constants.HUMIDITY);
-                        weatherForecastInformation = new WeatherForecastInformation(
-                                temperature, windSpeed, condition, pressure, humidity
-                        );
-                        serverThread.setData(city, weatherForecastInformation);
-                        break;
-                    }
-                }
+                String scriptData = document.text();
+                JSONObject content = new JSONObject(scriptData);
+                // String updated = content.getJSONObject("time").getString("updated");
+                String updated = getCurrentTime();
+                String eur = content.getJSONObject("bpi").getJSONObject("EUR").getString("rate");
+                String usd = content.getJSONObject("bpi").getJSONObject("USD").getString("rate");
+
+                weatherForecastInformation = new WeatherForecastInformation(
+                        updated, eur, usd
+                );
+                serverThread.setData(city, weatherForecastInformation);
             }
             if (weatherForecastInformation == null) {
                 Log.e(Constants.TAG, "[COMMUNICATION THREAD] Weather Forecast Information is null!");
                 return;
             }
             String result = null;
-            switch(informationType) {
-                case Constants.ALL:
-                    result = weatherForecastInformation.toString();
-                    break;
-                case Constants.TEMPERATURE:
-                    result = weatherForecastInformation.getTemperature();
-                    break;
-                case Constants.WIND_SPEED:
-                    result = weatherForecastInformation.getWindSpeed();
-                    break;
-                case Constants.CONDITION:
-                    result = weatherForecastInformation.getCondition();
-                    break;
-                case Constants.HUMIDITY:
-                    result = weatherForecastInformation.getHumidity();
-                    break;
-                case Constants.PRESSURE:
-                    result = weatherForecastInformation.getPressure();
-                    break;
-                default:
-                    result = "[COMMUNICATION THREAD] Wrong information type (all / temperature / wind_speed / condition / humidity / pressure)!";
+            if (city.compareTo("EUR") == 0) {
+                result = weatherForecastInformation.eurToString();
+            } else if (city.compareTo("USD") == 0) {
+                result = weatherForecastInformation.usdToString();
             }
+
             printWriter.println(result);
             printWriter.flush();
         } catch (IOException ioException) {

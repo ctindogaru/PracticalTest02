@@ -6,7 +6,7 @@ public interface Constants {
 
     final public static boolean DEBUG = true;
 
-    final public static String WEB_SERVICE_ADDRESS = "https://www.wunderground.com/cgi-bin/findweather/getForecast";
+    final public static String WEB_SERVICE_ADDRESS = "https://api.coindesk.com/v1/bpi/currentprice/";
 
     final public static String TEMPERATURE = "temperature";
     final public static String WIND_SPEED = "wind_speed";
